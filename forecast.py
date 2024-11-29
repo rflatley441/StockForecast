@@ -5,12 +5,12 @@ from hmmlearn.hmm import GaussianHMM
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
-#Fetch stock data
+# Fetch stock data
 def fetch_data(ticker, start_date, end_date):
     data = yf.download(ticker, start=start_date, end=end_date)
     return data['Adj Close']
 
-#Calculate daily returns (observed state)
+# Calculate daily returns (observed state)
 def calculate_returns(prices):
     returns = prices.pct_change().dropna()  # daily returns (percentage change)
     return returns
@@ -35,8 +35,8 @@ def predict_future_state(model, last_data_point):
     future_state = model.predict(last_return_reshaped)
     return future_state[0]
 
-# Step 6: Visualize the results
-def plot_results(prices, hidden_states):
+# Visualize the results
+def plot_results(prices, hidden_states, state_labels):
     # Ensure hidden_states and prices have the same length (length is always one off, idk why)
     if len(prices) > len(hidden_states):
         prices = prices[:len(hidden_states)]
@@ -44,17 +44,21 @@ def plot_results(prices, hidden_states):
         hidden_states = hidden_states[:len(prices)]
     
     plt.figure(figsize=(10, 6))
-    plt.plot(prices.index, prices, label='Stock Price')
-    plt.scatter(prices.index, prices, c=hidden_states, cmap='viridis', marker='o')
+    
+    # Scatter plot of stock prices with hidden states colors
+    scatter = plt.scatter(prices.index, prices, c=hidden_states, cmap='viridis', marker='o')
+    
+    # Add legend with the correct labels for the states
+    plt.legend(handles=scatter.legend_elements()[0], labels=state_labels, title="Market States")
+    
     plt.title('Hidden States over Time')
     plt.xlabel('Date')
     plt.ylabel('Price')
-    plt.legend()
     plt.show()
 
 if __name__ == "__main__":
     today = datetime.today()
-    last_month = today - timedelta(days=30)
+    last_month = today - timedelta(days=60)
     
     ticker = 'SPY'  # Could use multiple stocks for better analysis
     start_date_train = '2015-01-01'
@@ -81,7 +85,7 @@ if __name__ == "__main__":
     predicted_labels_train = [state_labels[state] for state in hidden_states_train]
     
     # Visualize the results for the training period
-    plot_results(stock_data_train, hidden_states_train)
+    plot_results(stock_data_train, hidden_states_train, state_labels)
     
     # Predict future market state based on the last observed return in the training data
     last_return_train = returns_train.iloc[-1]  # Last return value of the training period
@@ -93,7 +97,7 @@ if __name__ == "__main__":
     hidden_states_test = predict_states(hmm_model, returns_test)
     
     # Visualize the results for the test period
-    plot_results(stock_data_test, hidden_states_test)
+    plot_results(stock_data_test, hidden_states_test, state_labels)
     
     # Compare the prediction with the real stock returns (optional evaluation metric)
     last_return_test = returns_test.iloc[-1]  # Last return value of the test period
